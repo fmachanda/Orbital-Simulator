@@ -41,7 +41,7 @@ Y_RES = 500
 #endregion
 
 # Satellite creation
-from satellites import satellites
+from setup import satellites
 
 INFO = False
 

@@ -28,14 +28,14 @@ This is a multi-body orbit simulator with a **pygame** interface. It allows for 
 
 ## Satellite Setup
 
-To setup the initial states of the satellites, open `satellites.py`. You should see some lines of code that create a list of satellites, such as this:
+To setup the initial states of the satellites, open `setup.py`. You should see some lines of code that create a list of satellites, such as this:
 
 ```python
 satellites = [
     Orbiter(earth, 1e7, 1e7),
-    Orbiter(moon, 1e5, 5e6, f=3.14),
-    Orbiter(earth, 1e7, 1e8, direction=-1, w=1.57),
-    Orbiter(sun, 1e11, 1e12, f=1.57, w=3.14),
+    Orbiter(moon, 1e5, 5e6, f=pi),
+    Orbiter(earth, 1e7, 1e8, direction=-1, w=pi/2),
+    Orbiter(sun, 1e11, 1e12, f=pi/2, w=3*pi/4),
     ...
 ]
 ```

@@ -6,7 +6,7 @@ from pygame.locals import *
 import time
 
 from orbit import sun, earth, moon
-from orbit import Orbiter
+from orbit import Orbiter, Body
 
 #region Constants
 # Calculation settings
@@ -31,7 +31,7 @@ FONT_COLOR = (255, 255, 255)
 TEXT_X = 20
 TEXT_Y = 20
 
-DT = 64 # Seconds per calculation
+DT = 32 # Seconds per calculation
 T_RES = 64 # Calculations per frame
 DELAY = 0 # Added time buffer
 
@@ -81,8 +81,8 @@ def calc() -> None:
         satellite.ref = sun
 
         for body in [sun, earth, moon]:
-            if (body.x - body.r < satellite.x < body.x + body.r) and (body.y - body.r < satellite.y < body.y + body.r):
-                if (body.x - np.sqrt(body.r**2 - (satellite.y-body.y)**2) < satellite.x < body.x + np.sqrt(body.r**2 - (satellite.y-body.y)**2)) and (body.y - np.sqrt(body.r**2 - (satellite.x-body.x)**2) < satellite.y < body.y + np.sqrt(body.r**2 - (satellite.x-body.x)**2)):
+            if (body.x - body.radius < satellite.x < body.x + body.radius) and (body.y - body.radius < satellite.y < body.y + body.radius):
+                if (body.x - np.sqrt(body.radius**2 - (satellite.y-body.y)**2) < satellite.x < body.x + np.sqrt(body.radius**2 - (satellite.y-body.y)**2)) and (body.y - np.sqrt(body.radius**2 - (satellite.x-body.x)**2) < satellite.y < body.y + np.sqrt(body.radius**2 - (satellite.x-body.x)**2)):
                     print(f"COLLISION: Satellite #{i} with {body.name}")
                     satellites.pop(i)
 
@@ -119,24 +119,28 @@ def update_screen() -> None:
         pygame.draw.circle(screen, (max(0, 255-10*i), 100, min(255, 100+10*i)), (int((satellite.x-ref.x) * M_TO_P)+WIDTH_P//2, int((ref.y-satellite.y) * M_TO_P)+HEIGHT_P//2), int(2 * SPRITE_SCALE))
     
     if MOON:    
-        pygame.draw.circle(screen, GRAY, (int((moon.x-ref.x) * M_TO_P)+WIDTH_P//2, int((ref.y-moon.y) * M_TO_P)+HEIGHT_P//2), max(2 * SPRITE_SCALE, int(moon.r * SPRITE_SCALE * M_TO_P)))
+        pygame.draw.circle(screen, GRAY, (int((moon.x-ref.x) * M_TO_P)+WIDTH_P//2, int((ref.y-moon.y) * M_TO_P)+HEIGHT_P//2), max(2 * SPRITE_SCALE, int(moon.radius * SPRITE_SCALE * M_TO_P)))
     if EARTH:
-        pygame.draw.circle(screen, BLUE, (int((earth.x-ref.x) * M_TO_P)+WIDTH_P//2, int((ref.y-earth.y) * M_TO_P)+HEIGHT_P//2), max(2 * SPRITE_SCALE, int(earth.r * SPRITE_SCALE * M_TO_P)))
+        pygame.draw.circle(screen, BLUE, (int((earth.x-ref.x) * M_TO_P)+WIDTH_P//2, int((ref.y-earth.y) * M_TO_P)+HEIGHT_P//2), max(2 * SPRITE_SCALE, int(earth.radius * SPRITE_SCALE * M_TO_P)))
     if SUN:
-        pygame.draw.circle(screen, YELLOW, (int((sun.x-ref.x) * M_TO_P)+WIDTH_P//2, int((ref.y-sun.y) * M_TO_P)+HEIGHT_P//2), max(2 * SPRITE_SCALE, int(sun.r * SPRITE_SCALE * M_TO_P)))
+        pygame.draw.circle(screen, YELLOW, (int((sun.x-ref.x) * M_TO_P)+WIDTH_P//2, int((ref.y-sun.y) * M_TO_P)+HEIGHT_P//2), max(2 * SPRITE_SCALE, int(sun.radius * SPRITE_SCALE * M_TO_P)))
 
-    if INFO and isinstance(ref, Orbiter) and ref in satellites:
+    if INFO:
+        if isinstance(ref, Orbiter):
+            name = f"Satellite #{satellites.index(ref)+1}"
+        elif isinstance(ref, Body):
+            name = ref.name
         text = [
-            f"SATELLITE #{satellites.index(ref)+1}",
+            name,
             f"Reference: {(ref.ref.name)}",
-            f"Altitude: {(ref.mag_r-ref.ref.r)/1e3:.2f} km",
+            f"Altitude: {(ref.mag_r-ref.ref.radius)/1e3:.2f} km",
             f"Velocity: {ref.mag_v:.2f} m/s",
             f"Apoapsis: {ref.apo_surf/1e3:.2f} km AGL ({ref.apo/1e3:.2f} km)",
             f"Periapsis: {ref.peri_surf/1e3:.2f} km AGL ({ref.peri/1e3:.2f} km)",
             f"a: {ref.a/1e3:.2f} km",
             f"e: {ref.e:.2f}",
             f"w: {np.degrees(ref.w)%360:.2f}\u00b0",
-        ]
+        ] if ref.ref is not None else [name]
         label = []
         for line in text: 
             label.append(font.render(line, True, FONT_COLOR))
@@ -144,7 +148,7 @@ def update_screen() -> None:
         for i, text in enumerate(label):
             screen.blit(text, (TEXT_X, TEXT_Y+i*(FONT_SIZE+LINE_SPACE)))
 
-    dt_text = font.render(f"DT: {float(DT)} s", True, (100, 100, 100))
+    dt_text = font.render(f"{float(DT)}s x {T_RES}", True, (100, 100, 100))
     dt_rect = dt_text.get_rect()
     dt_rect.bottomright = (WIDTH_P-TEXT_X, HEIGHT_P-TEXT_Y)
     screen.blit(dt_text, dt_rect)

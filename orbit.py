@@ -34,34 +34,106 @@ def force(m1: float, m2: float, r_squared: float) -> float:
 
 # Main classes
 class Point:
-    def __init__(self, x: float, y: float, vx: float = 0.0, vy: float = 0.0) -> None:
+    def __init__(self, x: float, y: float, vx: float = 0.0, vy: float = 0.0, ref: 'Body | None' = None) -> None:
         self.x = x
         self.y = y
         self.vx = vx
         self.vy = vy
+        self.ref = ref
+
+    @property
+    def mu(self) -> float:
+        return 0 if self.ref is None else self.ref.m * G
+    
+    @property
+    def ref_x(self) -> float:
+        return 0 if self.ref is None else self.x-self.ref.x
+    
+    @property
+    def ref_y(self) -> float:
+        return 0 if self.ref is None else self.y-self.ref.y
+    
+    @property
+    def ref_vx(self) -> float:
+        return 0 if self.ref is None else self.vx-self.ref.vx
+    
+    @property
+    def ref_vy(self) -> float:
+        return 0 if self.ref is None else self.vy-self.ref.vy
+
+    @property
+    def r(self) -> np.ndarray:
+        return 0 if self.ref is None else np.array([self.ref_x, self.ref_y, 0])
+
+    @property
+    def mag_r(self) -> float:
+        return 0 if self.ref is None else np.linalg.norm(self.r)
+
+    @property
+    def v(self) -> np.ndarray:
+        return 0 if self.ref is None else np.array([self.ref_vx, self.ref_vy, 0])
+
+    @property
+    def mag_v(self) -> float:
+        return 0 if self.ref is None else np.linalg.norm(self.v)
+
+    @property
+    def h(self) -> float:
+        return 0 if self.ref is None else self.ref_x*self.ref_vy - self.ref_y*self.ref_vx
+    
+    @property
+    def vec_e(self) -> np.ndarray:
+        return 0 if self.ref is None else np.cross(self.v, (np.array([0, 0, self.h])))/self.mu - self.r/self.mag_r
+
+    @property
+    def e(self) -> float:
+        return 0 if self.ref is None else np.linalg.norm(self.vec_e)
+
+    @property
+    def a(self) -> float:
+        return 0 if self.ref is None else self.h**2 / (self.mu * (1-self.e**2))
+    
+    @property
+    def apo(self) -> float:
+        return 0 if self.ref is None else self.a * (1+self.e)
+    
+    @property
+    def peri(self) -> float:
+        return 0 if self.ref is None else self.a * (1-self.e)
+    
+    @property
+    def apo_surf(self) -> float:
+        return 0 if self.ref is None else self.a * (1+self.e) - self.ref.radius
+    
+    @property
+    def peri_surf(self) -> float:
+        return 0 if self.ref is None else self.a * (1-self.e) - self.ref.radius
+
+    @property
+    def w(self) -> float:
+        return 0 if self.ref is None else np.arctan2(self.vec_e[1], self.vec_e[0])
 
 class Body(Point):
-
     count = 0
 
-    def __init__(self, x: float, y: float, m: float, r: float, vx: float = 0, vy: float = 0, name: str | None = None, soi_sq: float = 0.0) -> None:
-        super().__init__(x, y, vx, vy)
+    def __init__(self, x: float, y: float, m: float, r: float, vx: float = 0, vy: float = 0, name: str | None = None, soi_sq: float = 0.0, ref: 'Body | None' = None) -> None:
+        super().__init__(x, y, vx, vy, ref)
         Body.count += 1
         self.m: float = m
-        self.r: float = r
+        self.radius: float = r
         self.name = name if name is not None else f"Body {Body.count}"
         self.soi_sq = soi_sq
     
     def acceleration(self, body: Point) -> np.ndarray:
         """Acceleration from self on point mass."""
-        if (rs:=r_squared(self.x, self.y, body.x, body.y)) < self.r**2:
+        if (rs:=r_squared(self.x, self.y, body.x, body.y)) < self.radius**2:
             return np.array([0.0, 0.0])
         a = force(self.m, 1, rs)
         i, j = direction(body.x, body.y, self.x, self.y)
         return np.array([a*i, a*j])
     
     def acceleration_map(self, xcoords: np.ndarray, ycoords: np.ndarray) -> np.ndarray:
-        MIN_R_SQUARED = self.r**2
+        MIN_R_SQUARED = self.radius**2
         rs: np.ndarray = r_squared(xcoords, ycoords, self.x, self.y)
         rs = rs.clip(MIN_R_SQUARED, float('inf'))
         a = force(self.m, 1, rs)
@@ -75,8 +147,8 @@ class Orbiter(Point):
         self.ref = ref
         assert direction in [1, -1] # ccw=1, cw=-1
 
-        ap = max(apoapsis + ref.r, periapsis + ref.r)
-        pe = min(periapsis + ref.r, apoapsis + ref.r)
+        ap = max(apoapsis + ref.radius, periapsis + ref.radius)
+        pe = min(periapsis + ref.radius, apoapsis + ref.radius)
 
         a = (ap + pe)/2
         e = (ap-pe)/(2*a)
@@ -99,82 +171,11 @@ class Orbiter(Point):
             (x*np.cos(w)-y*np.sin(w)) + ref.x,
             (x*np.sin(w)+y*np.cos(w)) + ref.y,
             direction*(vx*np.cos(w)-vy*np.sin(w)) + ref.vx,
-            direction*(vx*np.sin(w)+vy*np.cos(w)) + ref.vy
+            direction*(vx*np.sin(w)+vy*np.cos(w)) + ref.vy,
+            ref
         )
-
-    @property
-    def mu(self) -> float:
-        return self.ref.m * G
-    
-    @property
-    def ref_x(self) -> float:
-        return self.x-self.ref.x
-    
-    @property
-    def ref_y(self) -> float:
-        return self.y-self.ref.y
-    
-    @property
-    def ref_vx(self) -> float:
-        return self.vx-self.ref.vx
-    
-    @property
-    def ref_vy(self) -> float:
-        return self.vy-self.ref.vy
-
-    @property
-    def r(self) -> np.ndarray:
-        return np.array([self.ref_x, self.ref_y, 0])
-
-    @property
-    def mag_r(self) -> float:
-        return np.linalg.norm(self.r)
-
-    @property
-    def v(self) -> np.ndarray:
-        return np.array([self.ref_vx, self.ref_vy, 0])
-
-    @property
-    def mag_v(self) -> float:
-        return np.linalg.norm(self.v)
-
-    @property
-    def h(self) -> float:
-        return self.ref_x*self.ref_vy - self.ref_y*self.ref_vx
-    
-    @property
-    def vec_e(self) -> np.ndarray:
-        return np.cross(self.v, (np.array([0, 0, self.h])))/self.mu - self.r/self.mag_r
-
-    @property
-    def e(self) -> float:
-        return np.linalg.norm(self.vec_e)
-
-    @property
-    def a(self) -> float:
-        return self.h**2 / (self.mu * (1-self.e**2))
-    
-    @property
-    def apo(self) -> float:
-        return self.a * (1+self.e)
-    
-    @property
-    def peri(self) -> float:
-        return self.a * (1-self.e)
-    
-    @property
-    def apo_surf(self) -> float:
-        return self.a * (1+self.e) - self.ref.r
-    
-    @property
-    def peri_surf(self) -> float:
-        return self.a * (1-self.e) - self.ref.r
-
-    @property
-    def w(self) -> float:
-        return np.arctan2(self.vec_e[1], self.vec_e[0])
 
 # Body creation
 sun = Body(0, 0, M_SUN, R_SUN, name="Sun")
-earth = Body(0, R_ES, M_EARTH, R_EARTH, vx=-V_EARTH, name="Earth", soi_sq=SOI_EARTH_SQ)
-moon = Body(-R_EM+earth.x, 0+earth.y, M_MOON, R_MOON, vy=-V_MOON+earth.vy, vx=earth.vx, name="Moon", soi_sq=SOI_MOON_SQ)
+earth = Body(0, R_ES, M_EARTH, R_EARTH, vx=-V_EARTH, name="Earth", soi_sq=SOI_EARTH_SQ, ref=sun)
+moon = Body(-R_EM+earth.x, 0+earth.y, M_MOON, R_MOON, vy=-V_MOON+earth.vy, vx=earth.vx, name="Moon", soi_sq=SOI_MOON_SQ, ref=earth)

@@ -16,5 +16,16 @@ Add satellites here using the following arguemnts of the Orbiter class
 
 """
 satellites = [
-    Orbiter(moon, 6.4e7, 6.4e7),
+    Orbiter(earth, 3e7, 3.9e8),
+    Orbiter(earth, 3e7, 4e8),
+    Orbiter(earth, 3e7, 4.1e8),
+
+    Orbiter(earth, 3e7, 3.9e8, w=pi/6),
+    Orbiter(earth, 3e7, 4e8, w=pi/6),
+    Orbiter(earth, 3e7, 4.1e8, w=pi/6),
+
+    Orbiter(earth, 3e7, 3.9e8, w=-pi/6),
+    Orbiter(earth, 3e7, 4e8, w=-pi/6),
+    Orbiter(earth, 3e7, 4.1e8, w=-pi/6),
+
 ]

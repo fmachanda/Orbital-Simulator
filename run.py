@@ -78,20 +78,16 @@ def calc() -> None:
         satellite.x += satellite.vx*DT
         satellite.y += satellite.vy*DT
 
-        for body in [earth, moon, sun]:
+        satellite.ref = sun
+
+        for body in [sun, earth, moon]:
             if (body.x - body.r < satellite.x < body.x + body.r) and (body.y - body.r < satellite.y < body.y + body.r):
                 if (body.x - np.sqrt(body.r**2 - (satellite.y-body.y)**2) < satellite.x < body.x + np.sqrt(body.r**2 - (satellite.y-body.y)**2)) and (body.y - np.sqrt(body.r**2 - (satellite.x-body.x)**2) < satellite.y < body.y + np.sqrt(body.r**2 - (satellite.x-body.x)**2)):
                     print(f"COLLISION: Satellite #{i} with {body.name}")
-
-                    print(f"Body L: {body.x - body.r}")
-                    print(f"Sat X:  {satellite.x}")
-                    print(f"Body R: {body.x + body.r}")
-
-                    print(f"Body T: {body.y + body.r}")
-                    print(f"Sat Y:  {satellite.y}")
-                    print(f"Body B: {body.y - body.r}")
-
                     satellites.pop(i)
+
+            if ((body.x-satellite.x)**2 + (body.y-satellite.y)**2)<body.soi_sq and body is not sun:
+                satellite.ref = body
 
     if MOON:
         amx, amy = (EARTH*earth.acceleration(moon)+SUN*sun.acceleration(moon))
@@ -132,6 +128,7 @@ def update_screen() -> None:
     if INFO and isinstance(ref, Orbiter) and ref in satellites:
         text = [
             f"SATELLITE #{satellites.index(ref)+1}",
+            f"Reference: {(ref.ref.name)}",
             f"Altitude: {(ref.mag_r-ref.ref.r)/1e3:.2f} km",
             f"Velocity: {ref.mag_v:.2f} m/s",
             f"Apoapsis: {ref.apo_surf/1e3:.2f} km AGL ({ref.apo/1e3:.2f} km)",

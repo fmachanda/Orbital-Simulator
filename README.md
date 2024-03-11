@@ -70,8 +70,6 @@ A black sqaure window should open with the simulation paused. You should see the
 
 Action|Control(s)
 ---|---
-||
-*View*
 Zoom in|**=**
 ||*Scroll up*
 Zoom out|**-**
@@ -83,13 +81,10 @@ Center on satellite 1|**1**
 Center on satellite 2|**2**
 ||...
 Show selected satellite info|**p**
-||
-*Operation*
+Map current field|**d**
 Pause/Unpause|**Spacebar**
 Step one calculation|**Up Arrow**
 Step one frame|**Right Arrow**
-||
-*Time management*
 Increase **DT**|**u**
 Decrease **DT**|**j**
 Increase calculations/frame|**i**

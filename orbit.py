@@ -7,6 +7,7 @@ G = 6.6743e-11
 M_EARTH = 5.972e24
 R_EARTH = 6.37814e6
 V_EARTH = 2.978e4
+SOI_EARTH_SQ = 9.29e8**2
 
 M_SUN = 1.989e30
 R_SUN = 6.96340e8
@@ -14,6 +15,7 @@ R_SUN = 6.96340e8
 M_MOON = 7.384e22
 R_MOON = 1.7374e6
 V_MOON = 1.022e3
+SOI_MOON_SQ = 6.43e7**2
 
 R_ES = 1.4845e11
 R_EM = 3.844e8
@@ -42,12 +44,13 @@ class Body(Point):
 
     count = 0
 
-    def __init__(self, x: float, y: float, m: float, r: float, vx: float = 0, vy: float = 0, name: str | None = None) -> None:
+    def __init__(self, x: float, y: float, m: float, r: float, vx: float = 0, vy: float = 0, name: str | None = None, soi_sq: float = 0.0) -> None:
         super().__init__(x, y, vx, vy)
         Body.count += 1
         self.m: float = m
         self.r: float = r
         self.name = name if name is not None else f"Body {Body.count}"
+        self.soi_sq = soi_sq
     
     def acceleration(self, body: Point) -> np.ndarray:
         """Acceleration from self on point mass."""
@@ -173,5 +176,5 @@ class Orbiter(Point):
 
 # Body creation
 sun = Body(0, 0, M_SUN, R_SUN, name="Sun")
-earth = Body(0, R_ES, M_EARTH, R_EARTH, vx=-V_EARTH, name="Earth")
-moon = Body(-R_EM+earth.x, 0+earth.y, M_MOON, R_MOON, vy=-V_MOON+earth.vy, vx=earth.vx, name="Moon")
+earth = Body(0, R_ES, M_EARTH, R_EARTH, vx=-V_EARTH, name="Earth", soi_sq=SOI_EARTH_SQ)
+moon = Body(-R_EM+earth.x, 0+earth.y, M_MOON, R_MOON, vy=-V_MOON+earth.vy, vx=earth.vx, name="Moon", soi_sq=SOI_MOON_SQ)

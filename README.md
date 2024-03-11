@@ -12,11 +12,12 @@ This is a multi-body orbit simulator with a **pygame** interface. It allows for 
 
 ## Installation
 
-1. Clone this repo into the desired directory.
+1. Clone this repo into the desired directory (change `<directory>` in the commands below as desired).
 
     ```bash
     git clone https://github.com/fmachanda/Orbital-Simulator.git <directory>
-    
+    ```
+    ```bash
     cd <directory>/Orbital-Simulator
     ```
 
@@ -28,7 +29,7 @@ This is a multi-body orbit simulator with a **pygame** interface. It allows for 
 
 ## Satellite Setup
 
-To setup the initial states of the satellites, open `setup.py`. You should see some lines of code that create a list of satellites, such as this:
+To setup the initial states of the satellites, open `setup.py` with a text editor. You should see some lines of code that create a list of satellites, such as this:
 
 ```python
 satellites = [
@@ -74,13 +75,13 @@ Zoom in|**=**
 ||*Scroll up*
 Zoom out|**-**
 ||*Scroll down*
-Center on Earth|**e**
-Center on Moon|**m**
-Center on Sun|**s**
-Center on satellite 1|**1**
-Center on satellite 2|**2**
+Select Earth|**e**
+Select Moon|**m**
+Select Sun|**s**
+Select Satellite 1|**1**
+Select Satellite 2|**2**
 ||...
-Show selected satellite info|**p**
+Show orbit info|**p**
 Map current field|**d**
 Pause/Unpause|**Spacebar**
 Step one calculation|**Up Arrow**
@@ -95,7 +96,7 @@ Decrease slowdown|**l**
 Remove slowdown|**.**
 
 ### Time management and DT
-In the bottom right corner, you should see a number labeled **DT**. This tells you how much time passes in between each calculation performed by the simulator (not between each frame, as many calculations are performed each frame). A higher number will let the simulation run faster, but with a lower precision (and vice versa). If you have a very fast satellite (e.g., with a very low periapsis), **DT** should be low. If you have problems with satellites acting weird, try the simulation again with a lower value of **DT**
+In the bottom right corner, you should see two numbers. The first is **DT**, which tells you how much time passes in between each calculation performed by the simulator. The second tells you how many of these calculations are performed in between each frame refresh. A higher **DT** will let the simulation run faster, but with a lower precision (and vice versa). If you have a very fast satellite (e.g., with a low periapsis), **DT** should be low. Setting **DT** too high will cause innacuracies (the Moon may even escape Earth orbit).
 
 ---
-*README.md modified 10 March 2024*
+*README.md modified 11 March 2024*

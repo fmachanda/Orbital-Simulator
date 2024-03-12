@@ -30,6 +30,7 @@ LINE_SPACE = 6
 FONT_COLOR = (255, 255, 255)
 TEXT_X = 20
 TEXT_Y = 20
+ORBIT_COLOR = (255, 255, 255)
 
 DT = 32 # Seconds per calculation
 T_RES = 64 # Calculations per frame
@@ -87,7 +88,11 @@ def calc() -> None:
                     satellites.pop(i)
 
             if ((body.x-satellite.x)**2 + (body.y-satellite.y)**2)<body.soi_sq and body is not sun:
+                temp = satellite.ref
                 satellite.ref = body
+                if satellite.e > 1:
+                    satellite.ref = temp
+
 
     if MOON:
         amx, amy = (EARTH*earth.acceleration(moon)+SUN*sun.acceleration(moon))
@@ -110,6 +115,32 @@ def calc() -> None:
         sun.x += sun.vx*DT
         sun.y += sun.vy*DT
 
+def draw_orbit(focus_x, focus_y, a, e, angle, M_TO_P) -> None:
+
+    angle += np.pi
+
+    b = a * np.sqrt(1-(min(1, e))**2)
+    d = a * e
+    cx = focus_x + d*np.cos(angle)
+    cy = focus_y - d*np.sin(angle)
+
+    cx = int((cx)*M_TO_P)+WIDTH_P//2
+    cy = int((cy)*M_TO_P)+HEIGHT_P//2
+    a = int(a*M_TO_P)
+    b = int(b*M_TO_P)
+
+    if abs(cx)>WIDTH_P*5 or abs(cy)>HEIGHT_P*5:
+        return
+
+    target_rect = pygame.Rect((0, 0, 2*a, 2*b))
+    target_rect.center = (cx, cy)
+    size = (max(1, target_rect.size[0]), max(1, target_rect.size[1]))
+    shape_surf = pygame.Surface(size, pygame.SRCALPHA)
+    pygame.draw.ellipse(shape_surf, ORBIT_COLOR, (0, 0, *size), width=1)
+    angle = np.degrees(angle)
+    rotated_surf = pygame.transform.rotate(shape_surf, angle)
+    screen.blit(rotated_surf, rotated_surf.get_rect(center = target_rect.center))
+
 def update_screen() -> None:
     M_TO_P = WIDTH_P / WIDTH_M
 
@@ -130,7 +161,7 @@ def update_screen() -> None:
             name = f"Satellite #{satellites.index(ref)+1}"
         elif isinstance(ref, Body):
             name = ref.name
-        text = [
+        text = [name] if ref.ref is None else [
             name,
             f"Reference: {(ref.ref.name)}",
             f"Altitude: {(ref.mag_r-ref.ref.radius)/1e3:.2f} km",
@@ -140,13 +171,15 @@ def update_screen() -> None:
             f"a: {ref.a/1e3:.2f} km",
             f"e: {ref.e:.2f}",
             f"w: {np.degrees(ref.w)%360:.2f}\u00b0",
-        ] if ref.ref is not None else [name]
+        ]
         label = []
         for line in text: 
             label.append(font.render(line, True, FONT_COLOR))
 
         for i, text in enumerate(label):
             screen.blit(text, (TEXT_X, TEXT_Y+i*(FONT_SIZE+LINE_SPACE)))
+        if ref.ref is not None:
+            draw_orbit(ref.ref.x-ref.x, ref.y-ref.ref.y, ref.a, ref.e, ref.w, M_TO_P)
 
     dt_text = font.render(f"{float(DT)}s x {T_RES}", True, (100, 100, 100))
     dt_rect = dt_text.get_rect()
@@ -159,7 +192,7 @@ if __name__=="__main__":
     # Graphics loop
     pygame.init()
     screen = pygame.display.set_mode((WIDTH_P, HEIGHT_P))
-    pygame.display.set_caption('Orbit Simulator v0.01')
+    pygame.display.set_caption('Orbit Simulator v0.9')
     font = pygame.font.Font('freesansbold.ttf', FONT_SIZE)
     running = True
     paused = True

@@ -7,7 +7,7 @@ G = 6.6743e-11
 M_EARTH = 5.972e24
 R_EARTH = 6.37814e6
 V_EARTH = 2.978e4
-SOI_EARTH_SQ = 9.29e8**2
+SOI_EARTH = 9.29e8
 
 M_SUN = 1.989e30
 R_SUN = 6.96340e8
@@ -15,7 +15,7 @@ R_SUN = 6.96340e8
 M_MOON = 7.384e22
 R_MOON = 1.7374e6
 V_MOON = 1.022e3
-SOI_MOON_SQ = 6.43e7**2
+SOI_MOON = 6.43e7
 
 R_ES = 1.4845e11
 R_EM = 3.844e8
@@ -34,12 +34,44 @@ def force(m1: float, m2: float, r_squared: float) -> float:
 
 # Main classes
 class Point:
+
+    state = np.empty((0, 4))
+    i = 0
+    registry = []
+
     def __init__(self, x: float, y: float, vx: float = 0.0, vy: float = 0.0, ref: 'Body | None' = None) -> None:
-        self.x = x
-        self.y = y
-        self.vx = vx
-        self.vy = vy
+        self.index = Point.i
+        Point.i += 1
+
+        Point.state = np.append(Point.state, [[x, y, vx, vy]], axis=0)
         self.ref = ref
+
+        Point.registry.append(self)
+
+    def delete(self) -> None:
+        if isinstance(self, Body):
+            return
+        Point.state = np.delete(Point.state, self.index, axis=0)
+        Point.i -= 1
+        Point.registry.pop(self.index)
+        for instance in Point.registry[self.index:]:
+            instance.index -= 1
+
+    @property
+    def x(self) -> float:
+        return Point.state[self.index][0]
+
+    @property
+    def y(self) -> float:
+        return Point.state[self.index][1]
+
+    @property
+    def vx(self) -> float:
+        return Point.state[self.index][2]
+
+    @property
+    def vy(self) -> float:
+        return Point.state[self.index][3]
 
     @property
     def mu(self) -> float:
@@ -115,14 +147,18 @@ class Point:
 
 class Body(Point):
     count = 0
+    masses = np.empty((0))
+    radii = np.empty((0))
 
-    def __init__(self, x: float, y: float, m: float, r: float, vx: float = 0, vy: float = 0, name: str | None = None, soi_sq: float = 0.0, ref: 'Body | None' = None) -> None:
+    def __init__(self, x: float, y: float, m: float, r: float, vx: float = 0, vy: float = 0, name: str | None = None, soi: float = 0.0, ref: 'Body | None' = None) -> None:
         super().__init__(x, y, vx, vy, ref)
         Body.count += 1
         self.m: float = m
+        Body.masses = np.append(Body.masses, self.m)
         self.radius: float = r
+        Body.radii = np.append(Body.radii, self.radius)
         self.name = name if name is not None else f"Body {Body.count}"
-        self.soi_sq = soi_sq
+        self.soi = soi
     
     def acceleration(self, body: Point) -> np.ndarray:
         """Acceleration from self on point mass."""
@@ -177,5 +213,5 @@ class Orbiter(Point):
 
 # Body creation
 sun = Body(0, 0, M_SUN, R_SUN, name="Sun")
-earth = Body(0, R_ES, M_EARTH, R_EARTH, vx=-V_EARTH, name="Earth", soi_sq=SOI_EARTH_SQ, ref=sun)
-moon = Body(-R_EM+earth.x, 0+earth.y, M_MOON, R_MOON, vy=-V_MOON+earth.vy, vx=earth.vx, name="Moon", soi_sq=SOI_MOON_SQ, ref=earth)
+earth = Body(0, R_ES, M_EARTH, R_EARTH, vx=-V_EARTH, name="Earth", soi=SOI_EARTH, ref=sun)
+moon = Body(-R_EM+earth.x, 0+earth.y, M_MOON, R_MOON, vy=-V_MOON+earth.vy, vx=earth.vx, name="Moon", soi=SOI_MOON, ref=earth)

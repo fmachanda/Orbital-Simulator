@@ -7,6 +7,7 @@ import time
 
 from orbit import sun, earth, moon
 from orbit import Orbiter, Body
+from orbit import Point, G
 
 #region Constants
 # Calculation settings
@@ -72,48 +73,36 @@ def display_amap(xmin: float, xmax: float, ymin: float, ymax: float) -> None:
 
 # Simulation functions
 def calc() -> None:
-    for i, satellite in enumerate(satellites):
-        apx, apy = EARTH*earth.acceleration(satellite) + MOON*moon.acceleration(satellite) + SUN*sun.acceleration(satellite)
-        satellite.vx += apx*DT
-        satellite.vy += apy*DT
-        satellite.x += satellite.vx*DT
-        satellite.y += satellite.vy*DT
 
-        satellite.ref = sun
+    x: np.ndarray = Point.state[:, 0:2]
+    d: np.ndarray = x[:Body.count, None, :] - np.broadcast_to(x, (Body.count,) + x.shape)
+    r: np.ndarray = np.linalg.norm(d, axis=2)
+    a: np.ndarray = G * Body.masses[:, None] * np.divide(1, r**2, out=np.zeros_like(r), where=r!=0)
+    n: np.ndarray = np.divide(d.astype(np.float64), np.dstack([r]*2), out=np.zeros_like(d.astype(np.float64)), where=np.dstack([r]*2)!=0)
+    Point.state[:, 2:] += DT * np.sum(n * a[:, :, None], axis=0)
+    Point.state[:, 0:2] += DT * Point.state[:, 2:]
 
-        for body in [sun, earth, moon]:
-            if (body.x - body.radius < satellite.x < body.x + body.radius) and (body.y - body.radius < satellite.y < body.y + body.radius):
-                if (body.x - np.sqrt(body.radius**2 - (satellite.y-body.y)**2) < satellite.x < body.x + np.sqrt(body.radius**2 - (satellite.y-body.y)**2)) and (body.y - np.sqrt(body.radius**2 - (satellite.x-body.x)**2) < satellite.y < body.y + np.sqrt(body.radius**2 - (satellite.x-body.x)**2)):
-                    print(f"COLLISION: Satellite #{i} with {body.name}")
-                    satellites.pop(i)
+    if (c:=(r[:, Body.count:] - Body.radii[:, None]<0)).any():
+        for i in np.unique(np.where(c)[1]):
+            satellites[i].delete()
+            satellites.pop(i)
+            print(f"Collision (Satellite {i})!")
 
-            if ((body.x-satellite.x)**2 + (body.y-satellite.y)**2)<body.soi_sq and body is not sun:
-                temp = satellite.ref
-                satellite.ref = body
-                if satellite.e > 1:
-                    satellite.ref = temp
+    # TODO
+    # for i in np.where(r[1, Body.count:]<earth.soi)[0]:
+    #     tmp = satellites[i].ref
+    #     satellites[i].ref = earth
+    #     if satellites[i].e > 1:
+    #         satellites[i].ref = tmp
 
-
-    if MOON:
-        amx, amy = (EARTH*earth.acceleration(moon)+SUN*sun.acceleration(moon))
-        moon.vx += amx*DT
-        moon.vy += amy*DT
-        moon.x += moon.vx*DT
-        moon.y += moon.vy*DT
-
-    if EARTH:
-        aex, aey = (MOON*moon.acceleration(earth)+SUN*sun.acceleration(earth))
-        earth.vx += aex*DT
-        earth.vy += aey*DT
-        earth.x += earth.vx*DT
-        earth.y += earth.vy*DT
-
-    if SUN:
-        asx, asy = (EARTH*earth.acceleration(sun)+MOON*moon.acceleration(sun))
-        sun.vx += asx*DT
-        sun.vy += asy*DT
-        sun.x += sun.vx*DT
-        sun.y += sun.vy*DT
+    # OLD
+    # satellite.ref = sun
+    # for body in [sun, earth, moon]:
+    #     if ((body.x-satellite.x)**2 + (body.y-satellite.y)**2)<body.soi_sq and body is not sun:
+    #         temp = satellite.ref
+    #         satellite.ref = body
+    #         if satellite.e > 1:
+    #             satellite.ref = temp
 
 def draw_orbit(focus_x, focus_y, a, e, angle, M_TO_P) -> None:
 
@@ -129,7 +118,7 @@ def draw_orbit(focus_x, focus_y, a, e, angle, M_TO_P) -> None:
     a = int(a*M_TO_P)
     b = int(b*M_TO_P)
 
-    if abs(cx)>WIDTH_P*5 or abs(cy)>HEIGHT_P*5:
+    if abs(cx)>WIDTH_P*4 or abs(cy)>HEIGHT_P*4:
         return
 
     target_rect = pygame.Rect((0, 0, 2*a, 2*b))

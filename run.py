@@ -107,35 +107,44 @@ def calc() -> None:
     if in_earth:
         if (c:=(r[1, [sat.index for sat in in_earth]] > earth.soi)).any():
             for i in np.where(c)[0]:
-                print(f"{in_earth[i].name} leaving Earth SOI")
                 in_earth[i].ref = sun
+                print(f"{in_earth[i].name.upper()} entering Sun orbit!")
                 in_sun.append(in_earth[i])
                 in_earth.pop(i)
 
         if (c:=(r[2, [sat.index for sat in in_earth]] < moon.soi)).any():
             for i in np.where(c)[0]:
-                print(f"{in_earth[i].name} entering Moon SOI")
                 in_earth[i].ref = moon
-                in_moon.append(in_earth[i])
-                in_earth.pop(i)
+                if in_earth[i].e < 1 and in_earth[i].peri < moon.soi:
+                    print(f"{in_earth[i].name.upper()} entering Moon orbit!")
+                    in_moon.append(in_earth[i])
+                    in_earth.pop(i)
+                else:
+                    in_earth[i].ref = earth
 
     if in_moon and (c:=(r[2, [sat.index for sat in in_moon]] > moon.soi)).any():
         for i in np.where(c)[0]:
-            print(f"{in_moon[i].name} leaving Moon SOI")
             in_moon[i].ref = earth
-            in_earth.append(in_moon[i])
-            in_moon.pop(i)
+            if in_moon[i].e < 1 and in_moon[i].peri < earth.soi:
+                print(f"{in_moon[i].name.upper()} entering Earth orbit!")
+                in_earth.append(in_moon[i])
+                in_moon.pop(i)
+            else:
+                in_moon[i].ref = moon
 
     if in_sun and (c:=(r[1, [sat.index for sat in in_sun]] < earth.soi)).any():
         for i in np.where(c)[0]:
-            print(f"{in_sun[i].name} entering Earth SOI")
             in_sun[i].ref = earth
-            in_earth.append(in_sun[i])
-            in_sun.pop(i)
+            if in_sun[i].e < 1 and in_sun[i].peri < earth.soi:
+                print(f"{in_sun[i].name.upper()} entering Earth orbit!")
+                in_earth.append(in_sun[i])
+                in_sun.pop(i)
+            else:
+                in_earth[i].ref = sun
 
     if (c:=(r[:, Body.count:] - Body.radii[:, None] < 0)).any():
         for i in np.unique(np.where(c)[1]):
-            print(f"{satellites[i].name} crashed!")
+            print(f"{satellites[i].name.upper()} crashed!")
             if satellites[i] in in_earth:
                 in_earth.remove(satellites[i])
             if satellites[i] in in_moon:
@@ -159,7 +168,7 @@ def draw_orbit(focus_x, focus_y, a, e, angle, M_TO_P) -> None:
     a = int(a*M_TO_P)
     b = int(b*M_TO_P)
 
-    if abs(cx)>WIDTH_P*4 or abs(cy)>HEIGHT_P*4:
+    if abs(cx)>WIDTH_P*3 or abs(cy)>HEIGHT_P*3:
         return
 
     target_rect = pygame.Rect((0, 0, 2*a, 2*b))
@@ -187,9 +196,9 @@ def update_screen() -> None:
         pygame.draw.circle(screen, YELLOW, (int((sun.x-ref.x) * M_TO_P)+WIDTH_P//2, int((ref.y-sun.y) * M_TO_P)+HEIGHT_P//2), max(2 * SPRITE_SCALE, int(sun.radius * SPRITE_SCALE * M_TO_P)))
 
     if INFO:
-        text = [ref.name] if ref.ref is None else [
-            ref.name,
-            f"Reference: {(ref.ref.name)}",
+        text = [ref.name.upper()] if ref.ref is None else [
+            ref.name.upper(),
+            f"Reference: {(ref.ref.name.upper())}",
             f"Altitude: {(ref.mag_r-ref.ref.radius)/1e3:.2f} km",
             f"Velocity: {ref.mag_v:.2f} m/s",
             f"Apoapsis: {ref.apo_surf/1e3:.2f} km AGL ({ref.apo/1e3:.2f} km)",

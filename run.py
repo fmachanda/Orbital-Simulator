@@ -72,8 +72,26 @@ def display_amap(xmin: float, xmax: float, ymin: float, ymax: float) -> None:
     plt.show()
 
 # Simulation functions
-def calc() -> None:
 
+in_sun = []
+in_moon = []
+in_earth = []
+
+x: np.ndarray = Point.state[:, 0:2]
+d: np.ndarray = x[:Body.count, None, :] - np.broadcast_to(x, (Body.count,) + x.shape)
+r: np.ndarray = np.linalg.norm(d, axis=2)
+
+for i in np.where(r[1, Body.count:] > earth.soi)[0]:
+    in_sun.append(satellites[i])
+
+for i in np.where(r[2, Body.count:] < moon.soi)[0]:
+    in_moon.append(satellites[i])
+
+for sat in satellites:
+    if sat not in in_sun and sat not in in_moon:
+        in_earth.append(sat)
+
+def calc() -> None:
     x: np.ndarray = Point.state[:, 0:2]
     d: np.ndarray = x[:Body.count, None, :] - np.broadcast_to(x, (Body.count,) + x.shape)
     r: np.ndarray = np.linalg.norm(d, axis=2)
@@ -82,27 +100,50 @@ def calc() -> None:
     Point.state[:, 2:] += DT * np.sum(n * a[:, :, None], axis=0)
     Point.state[:, 0:2] += DT * Point.state[:, 2:]
 
-    if (c:=(r[:, Body.count:] - Body.radii[:, None]<0)).any():
+    # print("---")
+    # print([sat.index for sat in in_earth])
+    # print(r.shape)
+
+    if in_earth:
+        if (c:=(r[1, [sat.index for sat in in_earth]] > earth.soi)).any():
+            for i in np.where(c)[0]:
+                print(f"{in_earth[i].name} leaving Earth SOI")
+                in_earth[i].ref = sun
+                in_sun.append(in_earth[i])
+                in_earth.pop(i)
+
+        if (c:=(r[2, [sat.index for sat in in_earth]] < moon.soi)).any():
+            for i in np.where(c)[0]:
+                print(f"{in_earth[i].name} entering Moon SOI")
+                in_earth[i].ref = moon
+                in_moon.append(in_earth[i])
+                in_earth.pop(i)
+
+    if in_moon and (c:=(r[2, [sat.index for sat in in_moon]] > moon.soi)).any():
+        for i in np.where(c)[0]:
+            print(f"{in_moon[i].name} leaving Moon SOI")
+            in_moon[i].ref = earth
+            in_earth.append(in_moon[i])
+            in_moon.pop(i)
+
+    if in_sun and (c:=(r[1, [sat.index for sat in in_sun]] < earth.soi)).any():
+        for i in np.where(c)[0]:
+            print(f"{in_sun[i].name} entering Earth SOI")
+            in_sun[i].ref = earth
+            in_earth.append(in_sun[i])
+            in_sun.pop(i)
+
+    if (c:=(r[:, Body.count:] - Body.radii[:, None] < 0)).any():
         for i in np.unique(np.where(c)[1]):
+            print(f"{satellites[i].name} crashed!")
+            if satellites[i] in in_earth:
+                in_earth.remove(satellites[i])
+            if satellites[i] in in_moon:
+                in_moon.remove(satellites[i])
+            if satellites[i] in in_sun:
+                in_sun.remove(satellites[i])
             satellites[i].delete()
             satellites.pop(i)
-            print(f"Collision (Satellite {i})!")
-
-    # TODO
-    # for i in np.where(r[1, Body.count:]<earth.soi)[0]:
-    #     tmp = satellites[i].ref
-    #     satellites[i].ref = earth
-    #     if satellites[i].e > 1:
-    #         satellites[i].ref = tmp
-
-    # OLD
-    # satellite.ref = sun
-    # for body in [sun, earth, moon]:
-    #     if ((body.x-satellite.x)**2 + (body.y-satellite.y)**2)<body.soi_sq and body is not sun:
-    #         temp = satellite.ref
-    #         satellite.ref = body
-    #         if satellite.e > 1:
-    #             satellite.ref = temp
 
 def draw_orbit(focus_x, focus_y, a, e, angle, M_TO_P) -> None:
 
@@ -146,12 +187,8 @@ def update_screen() -> None:
         pygame.draw.circle(screen, YELLOW, (int((sun.x-ref.x) * M_TO_P)+WIDTH_P//2, int((ref.y-sun.y) * M_TO_P)+HEIGHT_P//2), max(2 * SPRITE_SCALE, int(sun.radius * SPRITE_SCALE * M_TO_P)))
 
     if INFO:
-        if isinstance(ref, Orbiter):
-            name = f"Satellite #{satellites.index(ref)+1}"
-        elif isinstance(ref, Body):
-            name = ref.name
-        text = [name] if ref.ref is None else [
-            name,
+        text = [ref.name] if ref.ref is None else [
+            ref.name,
             f"Reference: {(ref.ref.name)}",
             f"Altitude: {(ref.mag_r-ref.ref.radius)/1e3:.2f} km",
             f"Velocity: {ref.mag_v:.2f} m/s",

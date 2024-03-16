@@ -28,4 +28,6 @@ satellites = [
     Orbiter(earth, 3e7, 4e8, w=-pi/6),
     Orbiter(earth, 3e7, 4.1e8, w=-pi/6),
 
+    # Orbiter(earth, 3e7, 1e10),
+
 ]

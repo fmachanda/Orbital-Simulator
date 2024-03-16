@@ -150,7 +150,7 @@ class Body(Point):
     masses = np.empty((0))
     radii = np.empty((0))
 
-    def __init__(self, x: float, y: float, m: float, r: float, vx: float = 0, vy: float = 0, name: str | None = None, soi: float = 0.0, ref: 'Body | None' = None) -> None:
+    def __init__(self, x: float, y: float, m: float, r: float, vx: float = 0, vy: float = 0, name: str | None = None, soi: float = float('inf'), ref: 'Body | None' = None) -> None:
         super().__init__(x, y, vx, vy, ref)
         Body.count += 1
         self.m: float = m
@@ -210,6 +210,8 @@ class Orbiter(Point):
             direction*(vx*np.sin(w)+vy*np.cos(w)) + ref.vy,
             ref
         )
+
+        self.name = f"Satellite {self.index - Body.count + 1}"
 
 # Body creation
 sun = Body(0, 0, M_SUN, R_SUN, name="Sun")

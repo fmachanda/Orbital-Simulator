@@ -1,5 +1,3 @@
-***WORK IN PROGRESS***
-
 # Orbital-Simulator
 
 This is a multi-body orbit simulator with a **pygame** interface. It allows for the modeling of more realistic spacecraft trajectories, calculating forces frame-by-frame rather than using two-body ellipses and spheres of influences.
@@ -41,7 +39,7 @@ satellites = [
 ]
 ```
 
-Adding or deleting the `Orbiter` lines within the `satellite` list declaration will create or remove independent, small mass satellites from the simulation.
+Adding or deleting the `Orbiter` lines within the `satellites` list declaration will create or remove independent, small mass satellites from the simulation.
 
 The `Orbiter` constructors allow the user to input some inital, elliptical orbital parameters for each satellite. This tells the simulator where to put each satellite, how much speed to give it, and which direction it's moving in. If no other celestial bodies were present in the simulator, the satellite would remain in this elliptical orbit forever. However, interactions with the other bodies present in the simulator will immediately start to change this orbit.
 

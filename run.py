@@ -10,6 +10,8 @@ from orbit import Orbiter, Body
 from orbit import Point, G
 
 #region Constants
+VERSION = 1.0
+
 # Calculation settings
 EARTH = True
 MOON = True
@@ -91,7 +93,7 @@ for sat in satellites:
     if sat not in in_sun and sat not in in_moon:
         in_earth.append(sat)
 
-def calc() -> None:
+def calc(info: bool = True) -> None:
     x: np.ndarray = Point.state[:, 0:2]
     d: np.ndarray = x[:Body.count, None, :] - np.broadcast_to(x, (Body.count,) + x.shape)
     r: np.ndarray = np.linalg.norm(d, axis=2)
@@ -100,51 +102,48 @@ def calc() -> None:
     Point.state[:, 2:] += DT * np.sum(n * a[:, :, None], axis=0)
     Point.state[:, 0:2] += DT * Point.state[:, 2:]
 
-    # print("---")
-    # print([sat.index for sat in in_earth])
-    # print(r.shape)
-
-    if in_earth:
-        if (c:=(r[1, [sat.index for sat in in_earth]] > earth.soi)).any():
-            for i in np.where(c)[0]:
-                in_earth[i].ref = sun
-                print(f"{in_earth[i].name.upper()} entering Sun orbit!")
-                in_sun.append(in_earth[i])
-                in_earth.pop(i)
-
-        if (c:=(r[2, [sat.index for sat in in_earth]] < moon.soi)).any():
-            for i in np.where(c)[0]:
-                in_earth[i].ref = moon
-                if in_earth[i].e < 1 and in_earth[i].peri < moon.soi:
-                    print(f"{in_earth[i].name.upper()} entering Moon orbit!")
-                    in_moon.append(in_earth[i])
+    if info:
+        if in_earth:
+            if (c:=(r[1, [sat.index for sat in in_earth]] > earth.soi)).any():
+                for i in np.where(c)[0]:
+                    in_earth[i].ref = sun
+                    # print(f"{in_earth[i].name.upper()} entering Sun orbit!")
+                    in_sun.append(in_earth[i])
                     in_earth.pop(i)
+
+            if (c:=(r[2, [sat.index for sat in in_earth]] < moon.soi)).any():
+                for i in np.where(c)[0]:
+                    in_earth[i].ref = moon
+                    if in_earth[i].e < 1 and in_earth[i].peri < moon.soi:
+                        # print(f"{in_earth[i].name.upper()} entering Moon orbit!")
+                        in_moon.append(in_earth[i])
+                        in_earth.pop(i)
+                    else:
+                        in_earth[i].ref = earth
+
+        if in_moon and (c:=(r[2, [sat.index for sat in in_moon]] > moon.soi)).any():
+            for i in np.where(c)[0]:
+                in_moon[i].ref = earth
+                if in_moon[i].e < 1 and in_moon[i].peri < earth.soi:
+                    # print(f"{in_moon[i].name.upper()} entering Earth orbit!")
+                    in_earth.append(in_moon[i])
+                    in_moon.pop(i)
                 else:
-                    in_earth[i].ref = earth
+                    in_moon[i].ref = moon
 
-    if in_moon and (c:=(r[2, [sat.index for sat in in_moon]] > moon.soi)).any():
-        for i in np.where(c)[0]:
-            in_moon[i].ref = earth
-            if in_moon[i].e < 1 and in_moon[i].peri < earth.soi:
-                print(f"{in_moon[i].name.upper()} entering Earth orbit!")
-                in_earth.append(in_moon[i])
-                in_moon.pop(i)
-            else:
-                in_moon[i].ref = moon
-
-    if in_sun and (c:=(r[1, [sat.index for sat in in_sun]] < earth.soi)).any():
-        for i in np.where(c)[0]:
-            in_sun[i].ref = earth
-            if in_sun[i].e < 1 and in_sun[i].peri < earth.soi:
-                print(f"{in_sun[i].name.upper()} entering Earth orbit!")
-                in_earth.append(in_sun[i])
-                in_sun.pop(i)
-            else:
-                in_earth[i].ref = sun
+        if in_sun and (c:=(r[1, [sat.index for sat in in_sun]] < earth.soi)).any():
+            for i in np.where(c)[0]:
+                in_sun[i].ref = earth
+                if in_sun[i].e < 1 and in_sun[i].peri < earth.soi:
+                    # print(f"{in_sun[i].name.upper()} entering Earth orbit!")
+                    in_earth.append(in_sun[i])
+                    in_sun.pop(i)
+                else:
+                    in_earth[i].ref = sun
 
     if (c:=(r[:, Body.count:] - Body.radii[:, None] < 0)).any():
         for i in np.unique(np.where(c)[1]):
-            print(f"{satellites[i].name.upper()} crashed!")
+            # print(f"{satellites[i].name.upper()} crashed!")
             if satellites[i] in in_earth:
                 in_earth.remove(satellites[i])
             if satellites[i] in in_moon:
@@ -227,7 +226,7 @@ if __name__=="__main__":
     # Graphics loop
     pygame.init()
     screen = pygame.display.set_mode((WIDTH_P, HEIGHT_P))
-    pygame.display.set_caption('Orbit Simulator v0.9')
+    pygame.display.set_caption(f'Orbit Simulator v{VERSION}')
     font = pygame.font.Font('freesansbold.ttf', FONT_SIZE)
     running = True
     paused = True
@@ -236,8 +235,8 @@ if __name__=="__main__":
     while running:
         if not paused:
             time.sleep(DELAY/1e3)
-            for _ in range(T_RES):
-                calc()
+            for n in range(T_RES):
+                calc(not n)
 
         update_screen()
 

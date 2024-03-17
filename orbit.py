@@ -160,14 +160,6 @@ class Body(Point):
         self.name = name if name is not None else f"Body {Body.count}"
         self.soi = soi
     
-    def acceleration(self, body: Point) -> np.ndarray:
-        """Acceleration from self on point mass."""
-        if (rs:=r_squared(self.x, self.y, body.x, body.y)) < self.radius**2:
-            return np.array([0.0, 0.0])
-        a = force(self.m, 1, rs)
-        i, j = direction(body.x, body.y, self.x, self.y)
-        return np.array([a*i, a*j])
-    
     def acceleration_map(self, xcoords: np.ndarray, ycoords: np.ndarray) -> np.ndarray:
         MIN_R_SQUARED = self.radius**2
         rs: np.ndarray = r_squared(xcoords, ycoords, self.x, self.y)

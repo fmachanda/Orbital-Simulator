@@ -239,10 +239,8 @@ if __name__=="__main__":
                 calc(not n)
 
         update_screen()
-
-        print(Point.state[0])
+        
         Point.state -= Point.state[0]
-        print(Point.state[0])
 
         for event in pygame.event.get():
             match event.type:
